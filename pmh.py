@@ -8,9 +8,21 @@ import time
 
 # ------------------------------------------------------------------------------ setup
 
-emsg = '''usage:
-    $ python pages_meta_history.py input_file [output_file]
-    '''
+emsg = '''
+Usage:
+    $ python pmh.py input_file [output_file]
+'''
+    
+'''
+TODO
+Options:
+    --col-  :   which columns to exclude from the output file
+    --col+  :   which columns to include into the output file (defaults to all)
+    Column names:
+                pageid, ns, revid, parentid, userid, timestamp, size, diff, line
+    --help  :   display this info
+'''
+
 try:
     inFile = bz2.BZ2File(sys.argv[1], 'r')
 except IndexError:
@@ -77,11 +89,6 @@ for i, line in enumerate(inFile):
         text_data = ''
     if has(line, '</text>'):
         text_lock = 0
-    
-    # ++ debug
-    #print '%s,%s,%s' % (i, page_lock, rev_lock)
-    # -- debug
-    
     '''
     page properties
     '''
@@ -107,12 +114,12 @@ for i, line in enumerate(inFile):
             rev_data['timestamp'] = clean(line, 'timestamp')
         if has(line, '<parentid>'):
             parentid = clean(line, 'parentid')
+            pid = 1
         if has(line, '<ip>'):
             rev_data['userid'] = clean(line, 'ip')
 
     if text_lock:
         text_data = text_data + line
-
     '''
     prepare entry for the finished revision & write a line to csv
     '''
@@ -120,14 +127,16 @@ for i, line in enumerate(inFile):
         # text size & diff:
         text_data = text_data.replace('<text xml:space="preserve">', '').replace('</text>', '')
         text_size = len(text_data)
-        if not text_lock and 'revid' in rev_data.keys():
-            if len(text_data) != 0:
-                difflog[rev_data['revid']] = text_size
+        
+        if 'revid' in rev_data.keys():
+            difflog[rev_data['revid']] = text_size
+        
         try:
             text_diff = text_size - difflog[parentid]
         except KeyError:
             text_diff = 'NA'
             parentid = 'NA'
+        
         if 'userid' in rev_data.keys():
             with open(outFile, 'a') as f:
                 f.write('%s;%s;%s;%s;%s;%s;%s;%s;%s\n' % (page_data['pageid'], 
