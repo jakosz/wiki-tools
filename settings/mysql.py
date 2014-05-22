@@ -1,4 +1,4 @@
-host = 'localhost'
-db = 'wikipedia_de'
+host = ''
+db = ''
 usr = ''
 pwd = ''
