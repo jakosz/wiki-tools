@@ -5,6 +5,19 @@ import os
 import sys
 import multiprocessing as m
 import pandas as p
+import time
+
+'''
+    Transforms pages-meta-history (pmh) tables into user-page aggregates.
+'''
+
+# ------------------------------------------------------------------------------ setup
+
+emsg = '''
+Usage:
+    $ python u2c.py infile [nproc] [nchunks]
+    %s
+'''
 
 try:
     inFile = sys.argv[1]
@@ -14,8 +27,32 @@ try:
             pass
         inLines = i + 2
 except IndexError:
-    # sys.exit(1)
-    pass
+    print emsg % ''
+    sys.exit(1)
+
+try:
+    NPROC = sys.argv[2]
+except IndexError:
+    print emsg % 'Number of worker processes set to default (8)\n'
+    NPROC = 8
+
+try:
+    NCHUNKS = sys.argv[3]
+except IndexError:
+    print emsg % 'Number of file chunks set to default (256)'
+    NCHUNKS = 256
+
+# ------------------------------------------------------------------------------ defs
+
+def aagg(df):
+    '''
+    After-aggregate: inserts back index names as dataframe columns
+    '''
+    idf = p.DataFrame([i for i in df.index])
+    df.index = range(df.shape[0])
+    res = p.concat([idf, df], axis = 1)
+    res.columns = ['userid', 'pageid', 'edits', 'chars']
+    return res
 
 def mapper(L):
     '''
@@ -32,10 +69,17 @@ def mapper(L):
     gf = df.groupby(['userid', 'pageid'])
     res = gf.aggregate([len, lambda x: sum(abs(x))])
     res.columns = ['edits', 'chars']
-    return res
+    return aagg(res)
 
 def reducer(L):
-    pass
+    '''
+    Input: mapper output; a list of pandas.DataFrames
+    Output: total aggregates per user-page (as with mapper)
+    '''
+    df = p.concat(L)
+    gf = df.groupby(['userid', 'pageid'])
+    res = gf.aggregate(sum)
+    return aagg(res)
 
 def lsplit(N, n):
     '''
@@ -62,18 +106,18 @@ def chread(File, From, To, header = True):
                 else:
                     res.append(line)
             if i >= To:
-                print 'chunk length: %s' % len(res)
                 return res
     return res
 
 def u2p(L):
-    outFile = '%s_%s-%s.csv' % (sys.argv[1], L[0], L[1])
-    print 'started %s' % outFile
+    print L
     res = mapper(chread(inFile, L[0], L[1]))
-    res.to_csv(outFile)
-    print 'done %s' % outFile
+    return res
+
+# ------------------------------------------------------------------------------ proc
 
 if __name__ == '__main__':
-    pool = m.Pool(processes = 8)
-    print len(lsplit(inLines, 128))
-    pool.map(u2p, lsplit(inLines, 128))
+    pool = m.Pool(processes = int(NPROC))
+    res = pool.map(u2p, lsplit(inLines, int(NCHUNKS)))
+    reducer(res).to_csv(sys.argv[1].replace('.csv', '_u2p.csv'))
+    print '%s processes did it in %s seconds' % (NPROC, time.time() - t0)
