@@ -134,7 +134,7 @@ for i, line in enumerate(inFile):
         try:
             text_diff = text_size - difflog[parentid]
         except KeyError:
-            text_diff = 'NA'
+            text_diff = text_size
             parentid = 'NA'
         
         if 'userid' in rev_data.keys():
