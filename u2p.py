@@ -13,6 +13,8 @@ import time
 
 # ------------------------------------------------------------------------------ setup
 
+t0 = time.time()
+
 emsg = '''
 Usage:
     $ python u2c.py infile [nproc] [nchunks]
