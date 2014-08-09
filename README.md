@@ -1,6 +1,9 @@
 ### wiki-tools 
  
-Scripts for processing Wikipedia data dumps 
+Scripts for processing Wikipedia data dumps
+
+**Warning**: this is a work in progress, poorly documented and not much tested.
+Someday I'll integrate these scripts into more high-level tools and document them properly.
 
 ---
 
